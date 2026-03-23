@@ -1,4 +1,4 @@
-import { createPublicClient, http, parseAbiItem, type Log } from "viem";
+import { createPublicClient, http, parseAbiItem } from "viem";
 import { mainnet, base } from "viem/chains";
 import { createRedisClient } from "../lib/redis";
 import { enqueueScore } from "./queue";
@@ -96,7 +96,7 @@ async function pollFactory(
     const toBlock =
       safeBlock - fromBlock > maxRange ? fromBlock + maxRange : safeBlock;
 
-    const logs: Log[] = await client.getLogs({
+    const logs = await client.getLogs({
       address: factoryAddress,
       event: PAIR_CREATED_EVENT,
       fromBlock,
@@ -110,8 +110,10 @@ async function pollFactory(
       // Idempotent: skip if already processed
       if (await isEventProcessed(txHash)) continue;
 
-      const token0 = log.args?.token0 as string | undefined;
-      const token1 = log.args?.token1 as string | undefined;
+      // PairCreated args: [token0, token1, pair, uint]
+      const args = log.args as unknown as [string?, string?, string?, bigint?];
+      const token0 = args?.[0];
+      const token1 = args?.[1];
 
       // WETH / WBASE addresses — the "quote" side of pairs
       const WETH = "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2";

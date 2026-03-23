@@ -1,20 +1,28 @@
 import NextAuth from "next-auth";
-import EmailProvider from "next-auth/providers/email";
-import { DrizzleAdapter } from "@auth/drizzle-adapter";
-import { db } from "./db/client";
+import Credentials from "next-auth/providers/credentials";
 
+// V1: Simple JWT auth. Email provider requires nodemailer + SMTP server.
+// For initial deployment, use credentials placeholder.
+// TODO: Wire up email magic link auth with a proper SMTP provider.
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  adapter: DrizzleAdapter(db),
   providers: [
-    EmailProvider({
-      server: process.env.EMAIL_SERVER,
-      from: process.env.EMAIL_FROM || "noreply@snipesheet.xyz",
+    Credentials({
+      name: "Email",
+      credentials: {
+        email: { label: "Email", type: "email" },
+      },
+      async authorize(credentials) {
+        // V1 placeholder: accept any email, create session
+        // Replace with proper email verification in production
+        const email = credentials?.email as string | undefined;
+        if (!email) return null;
+        return { id: email, email, name: email.split("@")[0] };
+      },
     }),
   ],
   session: { strategy: "jwt" },
   pages: {
     signIn: "/login",
-    verifyRequest: "/check-email",
   },
   callbacks: {
     session({ session, token }) {

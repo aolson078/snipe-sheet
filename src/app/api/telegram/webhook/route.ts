@@ -2,18 +2,21 @@ import { NextRequest, NextResponse } from "next/server";
 import { createBot } from "@/lib/telegram/bot";
 import { webhookCallback } from "grammy";
 
-let handler: ReturnType<typeof webhookCallback> | null = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let handler: ((req: Request) => Promise<Response>) | null = null;
 
 function getHandler() {
   if (!handler) {
     const bot = createBot();
-    handler = webhookCallback(bot, "std/http");
+    // Cast to align grammy's webhook handler with Web API Request/Response
+    handler = webhookCallback(bot, "std/http") as unknown as (
+      req: Request
+    ) => Promise<Response>;
   }
   return handler;
 }
 
 export async function POST(request: NextRequest) {
-  // Verify webhook secret
   const secret = request.headers.get("x-telegram-bot-api-secret-token");
   if (secret !== process.env.TELEGRAM_WEBHOOK_SECRET) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
