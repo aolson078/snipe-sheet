@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Skill(plan-eng-review)",
-      "Skill(plan-eng-review:*)"
+      "Skill(plan-eng-review:*)",
+      "WebSearch"
     ]
   }
 }
