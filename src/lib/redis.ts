@@ -7,12 +7,16 @@ export function createRedisClient() {
   return new IORedis(REDIS_URL, {
     maxRetriesPerRequest: null, // Required by BullMQ
     enableReadyCheck: false,
+    tls: REDIS_URL.startsWith("rediss://") ? {} : undefined,
   });
 }
 
 // BullMQ requires its own connection config
+const url = new URL(REDIS_URL);
 export const redisConnection = {
-  host: new URL(REDIS_URL).hostname,
-  port: parseInt(new URL(REDIS_URL).port || "6379"),
-  password: new URL(REDIS_URL).password || undefined,
+  host: url.hostname,
+  port: parseInt(url.port || "6379"),
+  password: url.password || undefined,
+  username: url.username || undefined,
+  tls: REDIS_URL.startsWith("rediss://") ? {} : undefined,
 };
