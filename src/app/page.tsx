@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { usePostHog } from "posthog-js/react";
 
 export default function Home() {
   const [address, setAddress] = useState("");
@@ -9,6 +10,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const posthog = usePostHog();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -20,6 +22,7 @@ export default function Home() {
       return;
     }
 
+    posthog?.capture("token_analyze_submitted", { chain });
     setLoading(true);
     try {
       const res = await fetch("/api/analyze", {
@@ -29,6 +32,7 @@ export default function Home() {
       });
 
       if (res.status === 429) {
+        posthog?.capture("rate_limit_hit");
         setError("Rate limit reached. Upgrade to Pro for unlimited checks.");
         return;
       }

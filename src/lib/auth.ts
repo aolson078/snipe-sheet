@@ -1,9 +1,9 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
+import { db } from "@/lib/db/client";
+import { users } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 
-// V1: Simple JWT auth. Email provider requires nodemailer + SMTP server.
-// For initial deployment, use credentials placeholder.
-// TODO: Wire up email magic link auth with a proper SMTP provider.
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
     Credentials({
@@ -12,11 +12,26 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         email: { label: "Email", type: "email" },
       },
       async authorize(credentials) {
-        // V1 placeholder: accept any email, create session
-        // Replace with proper email verification in production
         const email = credentials?.email as string | undefined;
-        if (!email) return null;
-        return { id: email, email, name: email.split("@")[0] };
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return null;
+
+        // Upsert user to get a stable UUID — required for subscription lookups
+        let user = await db.query.users.findFirst({
+          where: eq(users.email, email.toLowerCase()),
+        });
+        if (!user) {
+          const [inserted] = await db
+            .insert(users)
+            .values({ email: email.toLowerCase() })
+            .onConflictDoNothing()
+            .returning();
+          user = inserted ?? await db.query.users.findFirst({
+            where: eq(users.email, email.toLowerCase()),
+          });
+        }
+        if (!user) return null;
+
+        return { id: user.id, email: user.email, name: user.email.split("@")[0] };
       },
     }),
   ],

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, JetBrains_Mono } from "next/font/google";
+import { PostHogProvider } from "@/components/PostHogProvider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -47,7 +48,9 @@ export default function RootLayout({
             </a>
           </div>
         </nav>
-        <main className="flex-1">{children}</main>
+        <PostHogProvider>
+          <main className="flex-1">{children}</main>
+        </PostHogProvider>
       </body>
     </html>
   );

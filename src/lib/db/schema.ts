@@ -6,6 +6,7 @@ import {
   decimal,
   boolean,
   jsonb,
+  integer,
   uniqueIndex,
   index,
   pgEnum,
@@ -135,6 +136,20 @@ export const tokenScores = pgTable(
     index("token_scores_scored_at_idx").on(table.scoredAt),
   ]
 );
+
+// ── Invite Codes ───────────────────────────────────────
+
+export const inviteCodes = pgTable("invite_codes", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  code: text("code").notNull().unique(),
+  plan: planEnum("plan").default("pro").notNull(),
+  maxUses: integer("max_uses").default(1).notNull(),
+  uses: integer("uses").default(0).notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
 
 // ── Watchlist Items (Phase 2) ──────────────────────────
 

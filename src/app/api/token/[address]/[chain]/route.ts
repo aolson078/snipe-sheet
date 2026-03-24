@@ -63,6 +63,7 @@ export async function GET(
       summary: latestScore.summary,
       redFlags: latestScore.redFlags,
       greenFlags: latestScore.greenFlags,
+      rawSignals: latestScore.rawSignals,
       goplusAvailable: latestScore.goplusAvailable,
       socialAvailable: latestScore.socialAvailable,
       scoredAt: latestScore.scoredAt,

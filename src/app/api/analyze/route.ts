@@ -4,11 +4,38 @@ import { scoreToken } from "@/lib/scoring/engine";
 import { db } from "@/lib/db/client";
 import { tokens, tokenScores } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
+import { auth } from "@/lib/auth";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { getUserPlan } from "@/lib/stripe";
 
 export const maxDuration = 30; // Allow up to 30s for scoring on Vercel
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting — authed users by UUID, anonymous by IP
+    const session = await auth();
+    let rateLimitKey: string;
+    let plan: "free" | "pro" | "whale" = "free";
+
+    if (session?.user?.id) {
+      rateLimitKey = session.user.id;
+      plan = await getUserPlan(session.user.id);
+    } else {
+      const ip =
+        request.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
+        request.headers.get("x-real-ip") ??
+        "anon";
+      rateLimitKey = `ip:${ip}`;
+    }
+
+    const { allowed } = await checkRateLimit(rateLimitKey, plan);
+    if (!allowed) {
+      return NextResponse.json(
+        { error: "Daily limit reached. Sign up for Pro to continue." },
+        { status: 429 }
+      );
+    }
+
     const body = await request.json();
     const parsed = analyzeSchema.safeParse(body);
 

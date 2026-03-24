@@ -2,8 +2,17 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { usePostHog } from "posthog-js/react";
 import { ScoreBadge } from "@/components/ScoreBadge";
 import { SignalBar } from "@/components/SignalBar";
+
+interface SignalScores {
+  contract: { score: number } | null;
+  liquidity: { score: number } | null;
+  holders: { score: number } | null;
+  social: { score: number } | null;
+  tokenAge: { score: number } | null;
+}
 
 interface TokenScore {
   token: {
@@ -20,6 +29,7 @@ interface TokenScore {
     summary: string;
     redFlags: string[];
     greenFlags: string[];
+    rawSignals: SignalScores | null;
     goplusAvailable: boolean;
     socialAvailable: boolean;
     scoredAt: string;
@@ -31,6 +41,8 @@ export default function TokenDetailPage() {
   const [data, setData] = useState<TokenScore | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const posthog = usePostHog();
 
   useEffect(() => {
     let attempts = 0;
@@ -54,6 +66,12 @@ export default function TokenDetailPage() {
         const json = await res.json();
         setData(json);
         setLoading(false);
+        posthog?.capture("score_viewed", {
+          chain: params.chain,
+          verdict: json.score?.verdict,
+          confidence: json.score?.confidence,
+          score: json.score?.score,
+        });
       } catch {
         setError("Network error");
         setLoading(false);
@@ -97,7 +115,7 @@ export default function TokenDetailPage() {
   }
 
   const { token, score } = data;
-  const raw = score as TokenScore["score"] & { rawSignals?: Record<string, unknown> };
+  const signals = score.rawSignals;
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-12">
@@ -155,19 +173,19 @@ export default function TokenDetailPage() {
         </h2>
         <SignalBar
           label="Contract"
-          score={8}
+          score={signals?.contract?.score ?? 0}
           detail={score.goplusAvailable ? "GoPlus verified" : ""}
           available={score.goplusAvailable}
         />
-        <SignalBar label="Liquidity" score={6} detail="" />
-        <SignalBar label="Holders" score={5} detail="" />
+        <SignalBar label="Liquidity" score={signals?.liquidity?.score ?? 0} detail="" />
+        <SignalBar label="Holders" score={signals?.holders?.score ?? 0} detail="" />
         <SignalBar
           label="Social"
-          score={4}
+          score={signals?.social?.score ?? 0}
           detail=""
           available={score.socialAvailable}
         />
-        <SignalBar label="Age" score={3} detail="" />
+        <SignalBar label="Age" score={signals?.tokenAge?.score ?? 0} detail="" />
       </div>
 
       {/* Flags */}
@@ -215,10 +233,13 @@ export default function TokenDetailPage() {
             navigator.clipboard.writeText(
               `${window.location.origin}/share/${score.id}`
             );
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+            posthog?.capture("share_clicked", { verdict: score.verdict });
           }}
           className="px-4 py-2 text-sm font-mono border border-[#262626] rounded hover:bg-[#141414] transition-colors"
         >
-          Share
+          {copied ? "Copied!" : "Share"}
         </button>
         <a
           href="/"
