@@ -46,6 +46,9 @@ export default function RootLayout({
             <a href="/feed" className="hover:text-white transition-colors">
               Feed
             </a>
+            <a href="/watchlist" className="hover:text-white transition-colors">
+              Watchlist
+            </a>
           </div>
         </nav>
         <PostHogProvider>

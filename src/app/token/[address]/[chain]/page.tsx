@@ -16,6 +16,7 @@ interface SignalScores {
 
 interface TokenScore {
   token: {
+    id: string;
     address: string;
     chain: string;
     name: string | null;
@@ -42,6 +43,8 @@ export default function TokenDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [watched, setWatched] = useState(false);
+  const [watchLoading, setWatchLoading] = useState(false);
   const posthog = usePostHog();
 
   useEffect(() => {
@@ -80,6 +83,29 @@ export default function TokenDetailPage() {
 
     poll();
   }, [params.address, params.chain]);
+
+  async function handleWatch() {
+    if (!data) return;
+    setWatchLoading(true);
+    try {
+      const res = await fetch("/api/watchlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tokenId: data.token.id,
+          scoreAtAdd: data.score.score,
+          verdictAtAdd: data.score.verdict,
+        }),
+      });
+      if (res.ok || res.status === 409) {
+        setWatched(true);
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setWatchLoading(false);
+    }
+  }
 
   if (loading) {
     return (
@@ -228,6 +254,17 @@ export default function TokenDetailPage() {
 
       {/* Actions */}
       <div className="flex gap-3 justify-center">
+        <button
+          onClick={handleWatch}
+          disabled={watched || watchLoading}
+          className={`px-4 py-2 text-sm font-mono border rounded transition-colors ${
+            watched
+              ? "border-[#22c55e]/40 text-[#22c55e] cursor-default"
+              : "border-[#262626] hover:bg-[#141414] hover:border-[#22c55e]/40"
+          } disabled:opacity-60`}
+        >
+          {watched ? "Watching" : watchLoading ? "..." : "Watch"}
+        </button>
         <button
           onClick={() => {
             navigator.clipboard.writeText(

@@ -50,6 +50,7 @@ export async function GET(
 
   return NextResponse.json({
     token: {
+      id: token.id,
       address: token.address,
       chain: token.chain,
       name: token.name,
