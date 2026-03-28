@@ -2,14 +2,26 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db/client";
 import { tokens, tokenScores } from "@/lib/db/schema";
 import { desc, eq, sql } from "drizzle-orm";
+import { auth } from "@/lib/auth";
+import { getUserPlan } from "@/lib/stripe";
+
+const FREE_FEED_LIMIT = 3;
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const cursor = searchParams.get("cursor"); // scored_at ISO string for pagination
-  const limit = Math.min(parseInt(searchParams.get("limit") || "20"), 50);
 
-  // TODO: Add auth check. Free users get 3 results, Pro+ get full feed.
-  // For now, return full feed during development.
+  const session = await auth();
+  let plan: "free" | "pro" | "whale" = "free";
+  if (session?.user?.id) {
+    plan = await getUserPlan(session.user.id);
+  }
+
+  const maxLimit = plan === "free" ? FREE_FEED_LIMIT : 50;
+  const limit = Math.min(
+    parseInt(searchParams.get("limit") || "20"),
+    maxLimit
+  );
 
   try {
     const query = db
