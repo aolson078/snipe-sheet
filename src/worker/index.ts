@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { startScoreWorker } from "./score-processor";
 import { startLaunchMonitor } from "./launch-monitor";
+import { startWatchlistRescore } from "./watchlist-rescore";
 
 // ── Worker Entry Point ─────────────────────────────
 // Runs on Railway as a long-lived process, separate from Vercel.
@@ -15,11 +16,13 @@ console.log("[worker] Starting Snipe Sheet worker...");
 
 const scoreWorker = startScoreWorker();
 const launchMonitorInterval = startLaunchMonitor();
+const watchlistRescoreInterval = startWatchlistRescore();
 
 // Graceful shutdown
 async function shutdown() {
   console.log("[worker] Shutting down...");
   clearInterval(launchMonitorInterval);
+  clearInterval(watchlistRescoreInterval);
   await scoreWorker.close();
   process.exit(0);
 }
